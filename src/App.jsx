@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { connect, disconnect, isConnected, request, getLocalStorage } from '@stacks/connect'
 import './App.css'
 
 function App() {
@@ -9,6 +10,8 @@ function App() {
   const [threshold, setThreshold] = useState(300)
 
   const baseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so'
+  const contractAddress = 'SP2QNSNKR3NRDWNTX0Q7R4T8WGBJ8RE8RA516AKZP'
+  const contractName = 'blockdew'
 
   const isGoodTime = useMemo(() => {
     if (feeRate == null) return null
@@ -49,6 +52,98 @@ function App() {
     }
     fetchFee()
   }, [baseUrl])
+
+  const [paused, setPaused] = useState(null)
+  const [chainFee, setChainFee] = useState(null)
+  const fetchContractState = async () => {
+    try {
+      const sender = contractAddress
+      const read = async (fn) => {
+        const res = await fetch(`${baseUrl}/v2/contracts/call-read/${contractAddress}/${contractName}/${fn}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sender, arguments: [] })
+        })
+        const json = await res.json()
+        return json
+      }
+      const pausedRes = await read('is-paused')
+      const feeRes = await read('get-fee')
+      const p = pausedRes && pausedRes.result && pausedRes.result.startsWith('0x')
+        ? Number(pausedRes.result.slice(-2)) === 1
+        : null
+      let f = null
+      if (feeRes && feeRes.result) {
+        const hex = feeRes.result.replace(/^0x/, '')
+        try {
+          const buf = Buffer.from(hex, 'hex')
+          f = BigInt(`0x${hex}`)
+        } catch {
+          f = null
+        }
+      }
+      setPaused(p)
+      setChainFee(f)
+    } catch {
+      setPaused(null)
+      setChainFee(null)
+    }
+  }
+
+  useEffect(() => {
+    fetchContractState()
+  }, [baseUrl])
+
+  const [connected, setConnected] = useState(false)
+  useEffect(() => {
+    setConnected(isConnected())
+  }, [])
+
+  const doConnect = async () => {
+    await connect()
+    setConnected(isConnected())
+  }
+  const doDisconnect = async () => {
+    await disconnect()
+    setConnected(isConnected())
+  }
+
+  const callPause = async () => {
+    await request('stx_callContract', {
+      contractAddress,
+      contractName,
+      functionName: 'pause',
+      functionArgs: [],
+      postConditions: [],
+      postConditionMode: 'deny'
+    })
+    fetchContractState()
+  }
+  const callUnpause = async () => {
+    await request('stx_callContract', {
+      contractAddress,
+      contractName,
+      functionName: 'unpause',
+      functionArgs: [],
+      postConditions: [],
+      postConditionMode: 'deny'
+    })
+    fetchContractState()
+  }
+  const [newFee, setNewFee] = useState('0')
+  const callSetFee = async () => {
+    const u = Number(newFee)
+    if (!Number.isFinite(u) || u < 0) return
+    await request('stx_callContract', {
+      contractAddress,
+      contractName,
+      functionName: 'set-fee',
+      functionArgs: [{ type: 'uint', value: u.toString() }],
+      postConditions: [],
+      postConditionMode: 'deny'
+    })
+    fetchContractState()
+  }
 
   return (
     <div className="container">
@@ -99,6 +194,23 @@ function App() {
             )}
           </div>
         )}
+        <div className="actions">
+          <div className="controls">
+            {!connected ? (
+              <button onClick={doConnect}>Connect Wallet</button>
+            ) : (
+              <button onClick={doDisconnect}>Disconnect</button>
+            )}
+            <button onClick={callPause} disabled={!connected}>Pause</button>
+            <button onClick={callUnpause} disabled={!connected}>Unpause</button>
+            <div className="threshold">
+              <span>Set fee</span>
+              <input type="number" min="0" value={newFee} onChange={(e) => setNewFee(e.target.value)} />
+              <button onClick={callSetFee} disabled={!connected}>Apply</button>
+            </div>
+          </div>
+          <div className="status">Paused: {paused === null ? '—' : paused ? 'Yes' : 'No'} | On-chain fee: {chainFee == null ? '—' : String(chainFee)}</div>
+        </div>
       </div>
       <div className="footnote">Data: {baseUrl}/v2/fees/transfer</div>
     </div>
