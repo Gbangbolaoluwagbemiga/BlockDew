@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { connect, disconnect, isConnected, request } from '@stacks/connect'
-import { uintCV, cvToString } from '@stacks/transactions'
+import { uintCV, cvToString, hexToCV } from '@stacks/transactions'
 import './App.css'
 
 function App() {
@@ -70,9 +70,14 @@ function App() {
       }
       const pausedRes = await read('is-paused')
       const feeRes = await read('get-fee')
-      const p = pausedRes && pausedRes.result && pausedRes.result.startsWith('0x')
-        ? Number(pausedRes.result.slice(-2)) === 1
-        : null
+      const p = pausedRes && pausedRes.result ? (() => {
+        try {
+          const cv = hexToCV(pausedRes.result)
+          // (ok true) or (ok false)
+          const inner = cv.value
+          return inner && inner.type === 'bool' ? inner.value : null
+        } catch { return null }
+      })() : null
       let f = null
       if (feeRes && feeRes.result) {
         const hex = feeRes.result.replace(/^0x/, '')
@@ -94,7 +99,7 @@ function App() {
   }, [])
 
   const doConnect = async () => {
-    await connect()
+    await connect({ forceWalletSelect: true })
     setConnected(isConnected())
   }
   const doDisconnect = async () => {
