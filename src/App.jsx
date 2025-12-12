@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { connect, disconnect, isConnected, request } from '@stacks/connect'
-import { uintCV, cvToString, hexToCV } from '@stacks/transactions'
+import { uintCV, hexToCV, serializeCV } from '@stacks/transactions'
 import './App.css'
 
 function App() {
@@ -80,8 +80,11 @@ function App() {
       })() : null
       let f = null
       if (feeRes && feeRes.result) {
-        const hex = feeRes.result.replace(/^0x/, '')
-        try { f = BigInt(`0x${hex}`) } catch { f = null }
+        try {
+          const cv = hexToCV(feeRes.result)
+          const inner = cv.value
+          f = inner && inner.type === 'uint' ? inner.value : null
+        } catch { f = null }
       }
       setPaused(p)
       setChainFee(f)
@@ -131,7 +134,8 @@ function App() {
   const callSetFee = async () => {
     const u = Number(newFee)
     if (!Number.isFinite(u) || u < 0) return
-    const argHex = cvToString(uintCV(u))
+    const bytes = serializeCV(uintCV(u))
+    const argHex = '0x' + Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
     await request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'set-fee',
