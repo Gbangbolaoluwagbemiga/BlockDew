@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { connect, disconnect, isConnected, request } from '@stacks/connect'
+import { uintCV, cvToString } from '@stacks/transactions'
 import './App.css'
 
 function App() {
@@ -103,8 +104,7 @@ function App() {
 
   const callPause = async () => {
     await request('stx_callContract', {
-      contractAddress,
-      contractName,
+      contract: `${contractAddress}.${contractName}`,
       functionName: 'pause',
       functionArgs: [],
       postConditions: [],
@@ -114,8 +114,7 @@ function App() {
   }
   const callUnpause = async () => {
     await request('stx_callContract', {
-      contractAddress,
-      contractName,
+      contract: `${contractAddress}.${contractName}`,
       functionName: 'unpause',
       functionArgs: [],
       postConditions: [],
@@ -127,11 +126,11 @@ function App() {
   const callSetFee = async () => {
     const u = Number(newFee)
     if (!Number.isFinite(u) || u < 0) return
+    const argHex = cvToString(uintCV(u))
     await request('stx_callContract', {
-      contractAddress,
-      contractName,
+      contract: `${contractAddress}.${contractName}`,
       functionName: 'set-fee',
-      functionArgs: [{ type: 'uint', value: u.toString() }],
+      functionArgs: [argHex],
       postConditions: [],
       postConditionMode: 'deny'
     })
