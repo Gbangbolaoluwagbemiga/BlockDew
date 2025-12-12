@@ -117,27 +117,33 @@ function App() {
 
   const callPause = async () => {
     setContractBusy(true)
-    await request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
-      functionName: 'pause',
-      functionArgs: [],
-      postConditions: [],
-      postConditionMode: 'deny'
-    })
-    fetchContractState()
-    setContractBusy(false)
+    try {
+      await request('stx_callContract', {
+        contract: `${contractAddress}.${contractName}`,
+        functionName: 'pause',
+        functionArgs: [],
+        postConditions: [],
+        postConditionMode: 'deny'
+      })
+      await fetchContractState()
+    } finally {
+      setContractBusy(false)
+    }
   }
   const callUnpause = async () => {
     setContractBusy(true)
-    await request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
-      functionName: 'unpause',
-      functionArgs: [],
-      postConditions: [],
-      postConditionMode: 'deny'
-    })
-    fetchContractState()
-    setContractBusy(false)
+    try {
+      await request('stx_callContract', {
+        contract: `${contractAddress}.${contractName}`,
+        functionName: 'unpause',
+        functionArgs: [],
+        postConditions: [],
+        postConditionMode: 'deny'
+      })
+      await fetchContractState()
+    } finally {
+      setContractBusy(false)
+    }
   }
   const [newFee, setNewFee] = useState('0')
   const callSetFee = async () => {
@@ -146,15 +152,18 @@ function App() {
     const bytes = serializeCV(uintCV(u))
     const argHex = '0x' + Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
     setContractBusy(true)
-    await request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
-      functionName: 'set-fee',
-      functionArgs: [argHex],
-      postConditions: [],
-      postConditionMode: 'deny'
-    })
-    fetchContractState()
-    setContractBusy(false)
+    try {
+      await request('stx_callContract', {
+        contract: `${contractAddress}.${contractName}`,
+        functionName: 'set-fee',
+        functionArgs: [argHex],
+        postConditions: [],
+        postConditionMode: 'deny'
+      })
+      await fetchContractState()
+    } finally {
+      setContractBusy(false)
+    }
   }
 
   return (
@@ -213,12 +222,12 @@ function App() {
             ) : (
               <button onClick={doDisconnect}>Disconnect</button>
             )}
-            <button onClick={callPause} disabled={!connected}>Pause</button>
-            <button onClick={callUnpause} disabled={!connected}>Unpause</button>
+            <button onClick={callPause} disabled={!connected || contractBusy}>Pause</button>
+            <button onClick={callUnpause} disabled={!connected || contractBusy}>Unpause</button>
             <div className="threshold">
               <span>Set fee</span>
               <input type="number" min="0" value={newFee} onChange={(e) => setNewFee(e.target.value)} />
-              <button onClick={callSetFee} disabled={!connected}>Apply</button>
+              <button onClick={callSetFee} disabled={!connected || contractBusy}>Apply</button>
             </div>
             {(stateLoading || contractBusy) && (
               <div className="spinner" aria-label="Loading contract" />
