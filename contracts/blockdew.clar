@@ -3,6 +3,7 @@
 
 (define-constant ERR_UNAUTHORIZED (err u100))
 (define-constant ERR_PAUSED (err u101))
+(define-constant OWNER 'SP2QNSNKR3NRDWNTX0Q7R4T8WGBJ8RE8RA516AKZP)
 
 (define-read-only (get-fee)
   (ok (var-get fee-rate))
@@ -14,7 +15,7 @@
 
 (define-public (set-fee (rate uint))
   (begin
-    (asserts! (is-eq tx-sender (contract-owner)) ERR_UNAUTHORIZED)
+    (asserts! (is-eq tx-sender OWNER) ERR_UNAUTHORIZED)
     (asserts! (not (var-get paused)) ERR_PAUSED)
     (var-set fee-rate rate)
     (ok true)
@@ -23,7 +24,7 @@
 
 (define-public (pause)
   (begin
-    (asserts! (is-eq tx-sender (contract-owner)) ERR_UNAUTHORIZED)
+    (asserts! (is-eq tx-sender OWNER) ERR_UNAUTHORIZED)
     (var-set paused true)
     (ok true)
   )
@@ -31,7 +32,7 @@
 
 (define-public (unpause)
   (begin
-    (asserts! (is-eq tx-sender (contract-owner)) ERR_UNAUTHORIZED)
+    (asserts! (is-eq tx-sender OWNER) ERR_UNAUTHORIZED)
     (var-set paused false)
     (ok true)
   )
