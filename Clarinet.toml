@@ -1,0 +1,19 @@
+[project]
+name = 'blockdew'
+description = ''
+authors = []
+telemetry = true
+requirements = []
+
+[contracts.blockdew]
+path = 'contracts/blockdew.clar'
+clarity_version = 4
+
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
