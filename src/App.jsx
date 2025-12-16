@@ -25,7 +25,7 @@ function App() {
     root.classList.remove('theme-light', 'theme-dark')
     root.classList.add(theme === 'light' ? 'theme-light' : 'theme-dark')
     if (globalThis.localStorage) {
-      try { globalThis.localStorage.setItem('theme', theme) } catch {}
+      globalThis.localStorage.setItem('theme', theme)
     }
   }, [theme])
   const toggleTheme = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'))
